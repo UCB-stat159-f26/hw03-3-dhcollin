@@ -43,6 +43,8 @@ must use local data or mocked responses instead of contacting Tennis Abstract.
 The tests verify package installation, the network restriction, and parsing
 of the women's and men's local career samples. Invalid array declarations,
 malformed JSON, empty arrays, and invalid rows produce explicit errors.
+Women's cleaning tests check age calculations, leap days, match inclusion,
+missing birth dates, invalid values, duplicate records, and source-row order.
 
 ## Raw match data
 
@@ -57,6 +59,21 @@ an age in the men's sample. Both remain text during parsing. The
 [fixture documentation](tests/fixtures/README.md) describes the shared field
 positions and sample sources.
 
+## Clean match data
+
+The private women's cleaner in `src/tennisage/_cleaning.py` accepts parsed
+records, a player name, and a player birth date. It calculates both players'
+ages from elapsed days divided by 365.25. The signed age difference is the
+player's age minus the opponent's age, so positive values mean the player is
+older.
+
+Every valid source row is retained in chronological order. Stand-alone
+walkover and default records, and records without an opponent birth date,
+are marked as excluded from plotting with explicit reasons. Retirements are
+retained when ages are available. The data are not restricted to an article
+publication date. The [data dictionary](docs/data_dictionary.md) describes
+all columns, validation rules, and inclusion rules.
+
 ## Repository organization
 
 | Path | Purpose |
@@ -64,9 +81,11 @@ positions and sample sources.
 | `pyproject.toml` | Package metadata, dependencies, build configuration, and pytest settings. |
 | `src/tennisage/` | Importable Python package. |
 | `src/tennisage/_parsing.py` | Private match-array parser and structural validation. |
+| `src/tennisage/_cleaning.py` | Women's career cleaning, age calculations, and inclusion flags. |
 | `tests/` | Automated tests. |
 | `tests/fixtures/` | Local career samples and their field documentation. |
-| `MANIFEST.in` | Include tests and local fixtures in the source distribution. |
+| `docs/data_dictionary.md` | Cleaned columns, age definitions, and validation rules. |
+| `MANIFEST.in` | Include tests, local fixtures, and documentation in the source distribution. |
 | `README.md` | Installation, testing, and project documentation. |
 | `instructions.md` | Assignment instructions supplied with the repository. |
 | `.gitignore` | Exclusions for local environments, caches, and build outputs. |
