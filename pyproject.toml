@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tennisage"
+version = "0.1.0"
+description = "Career match data and player age comparisons from Tennis Abstract."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{name = "David H. Collin"}]
+dependencies = [
+    "pandas>=2.2,<3",
+    "matplotlib>=3.8,<4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<10",
+    "pytest-socket>=0.7,<1",
+    "build>=1.2,<2",
+]
+
+[project.urls]
+Repository = "https://github.com/UCB-stat159-f26/hw03-3-dhcollin"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["tennisage*"]
+namespaces = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--import-mode=importlib", "--strict-markers", "--disable-socket"]

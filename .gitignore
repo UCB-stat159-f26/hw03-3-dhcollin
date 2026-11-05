@@ -1,0 +1,25 @@
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Package build outputs
+build/
+dist/
+*.egg-info/
+
+# Test and notebook caches
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.ipynb_checkpoints/
+
+# Editor and operating-system files
+.DS_Store
+__MACOSX/
+.idea/
+.vscode/
+*.swp
+*.tmp
