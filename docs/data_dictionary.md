@@ -1,13 +1,15 @@
 # Clean career data
 
-The women's cleaner reads parsed match records and accepts the player's name
-and birth date as arguments. Player birth dates may use `YYYYMMDD` or
-`YYYY-MM-DD`. Tournament dates and opponent birth dates use the source's
-`YYYYMMDD` format. Surrounding whitespace is removed from selected source
-fields, and repeated whitespace in the player name is collapsed.
+The women's and men's cleaners read parsed match records and accept the
+player's name and birth date as arguments. Player birth dates may use
+`YYYYMMDD` or `YYYY-MM-DD`. Tournament dates and women's opponent birth dates
+use the source's `YYYYMMDD` format. Men's records instead supply numeric
+opponent ages. Surrounding whitespace is removed from selected source fields,
+and repeated whitespace in the player name is collapsed.
 
-The returned pandas data frame retains every valid source row. Rows are sorted
-by tournament date, with their original order preserved for tied dates.
+Both cleaners return the same pandas columns and data types, retaining every
+valid source row. Rows are sorted by tournament date, with their original order
+preserved for tied dates.
 
 | Column | Type | Meaning |
 | --- | --- | --- |
@@ -22,9 +24,9 @@ by tournament date, with their original order preserved for tied dates.
 | `round` | Text | Match round from field 8. |
 | `score` | Text | Score or match-status text from field 9. |
 | `opponent` | Text | Opponent's name from field 11. |
-| `opponent_dob` | Date or `NaT` | Opponent birth date from field 16 in women's records. |
+| `opponent_dob` | Date or `NaT` | Opponent birth date from field 16 in women's records; always `NaT` in men's records. |
 | `player_age` | Float | Elapsed days from player birth to tournament date, divided by 365.25. |
-| `opponent_age` | Float or `NaN` | Elapsed days from opponent birth to tournament date, divided by 365.25. |
+| `opponent_age` | Float or `NaN` | Women's age derived from birth date, or men's reported age from field 16. |
 | `age_difference` | Float or `NaN` | `player_age - opponent_age`; positive means the player is older. |
 | `included_in_plot` | Boolean | Whether the row has the ages and match status needed for plotting. |
 | `exclusion_reason` | Text | Empty for included rows; otherwise the reason or reasons described below. |
@@ -33,12 +35,15 @@ by tournament date, with their original order preserved for tied dates.
 
 Dates are timezone-naive pandas datetime columns. The source's tournament date
 is a proxy for the day of a match; multiple rounds may share that date.
-Fractional ages use elapsed days divided by 365.25, including actual leap days
-in the elapsed-day count. Ages are not rounded to whole years.
+The player's age and women's opponent ages use elapsed days divided by 365.25,
+including actual leap days in the elapsed-day count. Men's opponent ages are
+converted from source strings to floating-point numbers without rounding or
+recalculation. Opponent birth dates are not inferred from reported ages.
 
-The age difference uses the same tournament date for both players. A positive
-value means the player is older than the opponent, zero means equal ages, and
-a negative value means the player is younger.
+For women's records, both ages use the same tournament date. For men's records,
+the player's age at the tournament date is compared with the opponent's reported
+age. A positive difference means the player is older, zero means equal ages,
+and a negative difference means the player is younger.
 
 ## Inclusion rules
 
@@ -48,9 +53,12 @@ Consumers should select rows where `included_in_plot` is `True` when plotting.
 
 - Stand-alone scores `W/O`, `WO`, `WALKOVER`, `DEF`, and `DEFAULT` are excluded
   as `walkover_or_default`. Recognition ignores case and whitespace.
-- A blank opponent birth date produces `NaT` for `opponent_dob` and `NaN` for
-  `opponent_age` and `age_difference`. The row is excluded as
-  `missing_opponent_age`.
+- A blank women's opponent birth date produces `NaT` for `opponent_dob` and
+  `NaN` for `opponent_age` and `age_difference`. A blank men's reported age
+  also produces `NaN` for `opponent_age` and `age_difference`. Either case
+  excludes the row as `missing_opponent_age`.
+- Men's records with valid reported opponent ages can be included even though
+  `opponent_dob` is `NaT`.
 - If both conditions apply, the reason is
   `walkover_or_default;missing_opponent_age`.
 - Retirements and scores with played sets or games followed by a default
@@ -59,9 +67,12 @@ Consumers should select rows where `included_in_plot` is `True` when plotting.
 ## Validation
 
 Malformed nonblank dates, invalid calendar dates, and missing required dates
-raise `ValueError`. Ages below zero or at least 100 years also raise
-`ValueError`. A missing opponent birth date is allowed; a missing player
-birth date or tournament date is not.
+raise `ValueError`. Reported opponent ages must be numeric or blank; malformed
+nonblank values, including text such as `NaN`, raise `ValueError`. Nonfinite
+ages, ages below zero, and ages at least 100 years also raise `ValueError`.
+Missing opponent birth dates or reported ages are allowed and flagged for
+plot exclusion when no age is available. Missing player birth dates and
+tournament dates are not allowed.
 
 Results must be `W` or `L`. Tournament, opponent, round, and score fields must
 be nonblank. Matches must have unique combinations of tournament date,

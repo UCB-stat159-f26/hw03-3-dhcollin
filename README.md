@@ -45,6 +45,8 @@ of the women's and men's local career samples. Invalid array declarations,
 malformed JSON, empty arrays, and invalid rows produce explicit errors.
 Women's cleaning tests check age calculations, leap days, match inclusion,
 missing birth dates, invalid values, duplicate records, and source-row order.
+Men's cleaning tests check reported ages, missing and invalid values, shared
+inclusion rules, and compatibility with the women's output columns and types.
 
 ## Raw match data
 
@@ -61,18 +63,21 @@ positions and sample sources.
 
 ## Clean match data
 
-The private women's cleaner in `src/tennisage/_cleaning.py` accepts parsed
-records, a player name, and a player birth date. It calculates both players'
-ages from elapsed days divided by 365.25. The signed age difference is the
-player's age minus the opponent's age, so positive values mean the player is
-older.
+The private cleaners in `src/tennisage/_cleaning.py` accept parsed records,
+a player name, and a player birth date. Both return the same columns and
+calculate the player's age from elapsed days divided by 365.25. The women's
+cleaner derives opponent ages from birth dates. The men's cleaner uses the
+reported opponent ages directly and leaves opponent birth dates unavailable.
+The signed age difference is the player's age minus the opponent's age, so
+positive values mean the player is older.
 
 Every valid source row is retained in chronological order. Stand-alone
-walkover and default records, and records without an opponent birth date,
-are marked as excluded from plotting with explicit reasons. Retirements are
-retained when ages are available. The data are not restricted to an article
-publication date. The [data dictionary](docs/data_dictionary.md) describes
-all columns, validation rules, and inclusion rules.
+walkover and default records, and records without an opponent age, are marked
+as excluded from plotting with explicit reasons. A missing opponent birth
+date does not exclude a men's record when its reported age is available.
+Retirements are retained when ages are available. The data are not restricted
+to an article publication date. The [data dictionary](docs/data_dictionary.md)
+describes all columns, validation rules, and inclusion rules.
 
 ## Repository organization
 
@@ -81,7 +86,7 @@ all columns, validation rules, and inclusion rules.
 | `pyproject.toml` | Package metadata, dependencies, build configuration, and pytest settings. |
 | `src/tennisage/` | Importable Python package. |
 | `src/tennisage/_parsing.py` | Private match-array parser and structural validation. |
-| `src/tennisage/_cleaning.py` | Women's career cleaning, age calculations, and inclusion flags. |
+| `src/tennisage/_cleaning.py` | Women's and men's career cleaning, age calculations, and inclusion flags. |
 | `tests/` | Automated tests. |
 | `tests/fixtures/` | Local career samples and their field documentation. |
 | `docs/data_dictionary.md` | Cleaned columns, age definitions, and validation rules. |

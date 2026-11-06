@@ -1,4 +1,4 @@
-"""Clean career records and calculate ages from player birth dates."""
+"""Clean career records using birth dates or reported opponent ages."""
 
 import re
 
@@ -36,6 +36,24 @@ def _clean_womens_records(records, player_name: str, player_dob: str) -> pd.Data
     frame = _add_player(frame, player_name, player_dob)
     frame["opponent_age"] = _years_between(frame["tournament_date"], frame["opponent_dob"])
     return _finish_frame(frame)
+
+
+def _clean_mens_records(records, player_name: str, player_dob: str) -> pd.DataFrame:
+    """Return men's career records using the source's reported opponent ages."""
+    frame = _match_frame(records)
+    frame["opponent_age"] = _parse_reported_ages(frame.pop("opponent_info"))
+    frame["opponent_dob"] = pd.NaT
+    frame = _add_player(frame, player_name, player_dob)
+    return _finish_frame(frame)
+
+
+def _parse_reported_ages(values: pd.Series) -> pd.Series:
+    """Convert age strings to floats, preserving blanks as missing values."""
+    missing = values.eq("")
+    ages = pd.to_numeric(values.mask(missing), errors="coerce").astype(float)
+    if (ages.isna() & ~missing).any():
+        raise ValueError("opponent_age must contain numeric ages or blank values.")
+    return ages
 
 
 def _match_frame(records) -> pd.DataFrame:
@@ -97,7 +115,7 @@ def _years_between(later: pd.Series, earlier: pd.Series) -> pd.Series:
 
 
 def _validate_ages(frame: pd.DataFrame) -> None:
-    """Reject negative ages and ages of 100 years or more."""
+    """Require available ages to be finite and at least 0 but less than 100."""
     for column in ["player_age", "opponent_age"]:
         ages = frame[column].dropna()
         if not ages.between(0, 100, inclusive="left").all():
