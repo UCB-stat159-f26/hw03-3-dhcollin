@@ -1,33 +1,58 @@
 """Decode Tennis Abstract career match arrays without executing JavaScript."""
 
+import ast
 import json
 import re
 
 
-_MATCH_ARRAY = re.compile(
-    r"^[ \t]*(?:var|let|const)\s+morematchmx\s*=\s*", re.MULTILINE
-)
+_DECLARATION = r"^[ \t]*(?:var|let|const)\s+{}\s*=\s*"
+_SCALAR = re.compile(r'''('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|-?[0-9]+)\s*;''')
 _MIN_FIELDS = 17
 
 
-def _parse_career_js(source: str) -> list[list[str]]:
+def _parse_career_js(source: str, variable="morematchmx", allow_empty=False) -> list[list[str]]:
     """Return match rows with their original field positions and text values."""
     if not isinstance(source, str):
         raise TypeError("Career data must be supplied as text.")
-    records = _decode_records(source.lstrip("\ufeff"))
+    records = _decode_records(source.lstrip("\ufeff"), variable)
+    if allow_empty and records == []:
+        return records
     _validate_records(records)
     return records
 
 
-def _decode_records(source: str):
-    """Extract the JSON value assigned to the morematchmx variable."""
-    match = _MATCH_ARRAY.search(source)
+def _decode_records(source: str, variable="morematchmx"):
+    """Extract a JSON value assigned to a named JavaScript variable."""
+    match = _find_assignment(source, variable)
     if match is None:
-        raise ValueError("Career data do not contain a morematchmx declaration.")
+        raise ValueError(f"Career data do not contain a {variable} declaration.")
     try:
         return json.JSONDecoder().raw_decode(source[match.end():])[0]
     except json.JSONDecodeError as exc:
-        raise ValueError("The morematchmx value is not valid JSON.") from exc
+        raise ValueError(f"The {variable} value is not valid JSON.") from exc
+
+
+def _find_assignment(source: str, variable: str):
+    """Find a declaration at the beginning of a JavaScript source line."""
+    return re.search(_DECLARATION.format(re.escape(variable)), source, re.MULTILINE)
+
+
+def _parse_scalar(source: str, variable: str):
+    """Read a quoted string or integer without executing JavaScript."""
+    source = source.lstrip("\ufeff")
+    assignment = _find_assignment(source, variable)
+    match = _SCALAR.match(source, assignment.end()) if assignment else None
+    if match is None:
+        raise ValueError(f"Player metadata lack a valid {variable} declaration.")
+    return _literal_value(match.group(1))
+
+
+def _literal_value(literal: str):
+    """Convert a scalar literal and report malformed quoting consistently."""
+    try:
+        return ast.literal_eval(literal)
+    except (ValueError, SyntaxError) as exc:
+        raise ValueError("Player metadata contain an invalid string or integer.") from exc
 
 
 def _validate_records(records) -> None:

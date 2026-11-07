@@ -47,6 +47,25 @@ def _clean_mens_records(records, player_name: str, player_dob: str) -> pd.DataFr
     return _finish_frame(frame)
 
 
+def _clean_downloaded_records(records, player_name, player_dob, tour) -> pd.DataFrame:
+    """Clean current or legacy records, including mixed opponent age formats."""
+    frame = _add_player(_match_frame(records), player_name, player_dob)
+    information = frame.pop("opponent_info")
+    birth_dates = information.str.fullmatch(r"[0-9]{8}") | (tour == "W")
+    frame = _add_opponent_information(frame, information, birth_dates)
+    return _finish_frame(frame)
+
+
+def _add_opponent_information(frame, information, birth_dates) -> pd.DataFrame:
+    """Preserve available birth dates and combine derived and reported ages."""
+    births = information.where(birth_dates, "")
+    frame["opponent_dob"] = _parse_dates(births, "opponent_dob", allow_missing=True)
+    derived = _years_between(frame["tournament_date"], frame["opponent_dob"])
+    reported = _parse_reported_ages(information.where(~birth_dates, ""))
+    frame["opponent_age"] = derived.where(birth_dates, reported)
+    return frame
+
+
 def _parse_reported_ages(values: pd.Series) -> pd.Series:
     """Convert age strings to floats, preserving blanks as missing values."""
     missing = values.eq("")

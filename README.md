@@ -30,6 +30,44 @@ python -c "import tennisage; print(tennisage.__version__)"
 
 The expected version is `0.1.0`.
 
+## Retrieve career data
+
+```python
+from tennisage import get_career_data
+
+serena = get_career_data("serena williams")
+rafa = get_career_data("RafaelNadal")
+serena.head()
+```
+
+`get_career_data(player_name, *, timeout=20.0)` returns a pandas data frame
+with the player's full available singles career, ages, signed age differences,
+and plot-inclusion flags. Names are matched against Tennis Abstract's player
+index without regard to case, spacing, punctuation, or combining accents.
+The index is cached within the Python process; profile and match data are
+downloaded on each call. A positive, finite `timeout` limits each HTTP request
+in seconds. Internet access is required for retrieval.
+
+The function reads a full table embedded in the profile when available.
+For profiles that use separate JavaScript files, it combines the current
+`matchmx` table with the `morematchmx` archive when the profile indicates an
+archive exists. Current rows replace overlapping archive rows identified by
+date, tournament, round, and opponent. Missing or invalid required downloads
+raise an error instead of returning a partial career.
+
+Unknown names such as `"GastonSanchez"` raise `ValueError` with the requested
+name. Ambiguous names raise `ValueError` listing the indexed choices; a label
+such as `"(W) Alex Smith"` can distinguish otherwise identical names.
+Invalid metadata or match data also raise `ValueError`. Network, timeout, and
+HTTP failures raise `ConnectionError`; incorrect argument types raise
+`TypeError`.
+
+Direct installation from the GitHub repository is also supported:
+
+```bash
+python -m pip install git+https://github.com/UCB-stat159-f26/hw03-3-dhcollin.git
+```
+
 ## Tests
 
 Run the tests from the repository's top-level directory:
@@ -47,17 +85,21 @@ Women's cleaning tests check age calculations, leap days, match inclusion,
 missing birth dates, invalid values, duplicate records, and source-row order.
 Men's cleaning tests check reported ages, missing and invalid values, shared
 inclusion rules, and compatibility with the women's output columns and types.
+Retrieval tests replace HTTP responses with local payloads. They exercise
+name lookup, both profile layouts, archive overlap, metadata validation,
+request failures, and current men's records containing opponent birth dates.
 
 ## Raw match data
 
 The private parser in `src/tennisage/_parsing.py` reads the JSON-compatible
-array assigned to `morematchmx`. It does not execute the JavaScript file.
+arrays assigned to `morematchmx` or `matchmx`. It does not execute JavaScript.
 Each match row retains its original column positions and text values,
 including blank optional fields. Rows must contain at least 17 fields;
 additional columns are retained.
 
 Opponent information at index 16 is a birth date in the women's sample and
-an age in the men's sample. Both remain text during parsing. The
+an age in the men's sample. Current men's profile tables can also supply
+birth dates in that position. These values remain text during parsing. The
 [fixture documentation](tests/fixtures/README.md) describes the shared field
 positions and sample sources.
 
@@ -67,7 +109,9 @@ The private cleaners in `src/tennisage/_cleaning.py` accept parsed records,
 a player name, and a player birth date. Both return the same columns and
 calculate the player's age from elapsed days divided by 365.25. The women's
 cleaner derives opponent ages from birth dates. The men's cleaner uses the
-reported opponent ages directly and leaves opponent birth dates unavailable.
+legacy sample's reported opponent ages directly. The retrieval function also
+recognizes eight-digit opponent birth dates in current men's records and
+derives their ages. Birth dates remain unavailable for reported-age records.
 The signed age difference is the player's age minus the opponent's age, so
 positive values mean the player is older.
 
@@ -85,6 +129,9 @@ describes all columns, validation rules, and inclusion rules.
 | --- | --- |
 | `pyproject.toml` | Package metadata, dependencies, build configuration, and pytest settings. |
 | `src/tennisage/` | Importable Python package. |
+| `src/tennisage/data.py` | Public career-data retrieval and current/archive assembly. |
+| `src/tennisage/_download.py` | HTTP requests, timeouts, and text decoding. |
+| `src/tennisage/_players.py` | Player-name lookup, profile URLs, and metadata validation. |
 | `src/tennisage/_parsing.py` | Private match-array parser and structural validation. |
 | `src/tennisage/_cleaning.py` | Women's and men's career cleaning, age calculations, and inclusion flags. |
 | `tests/` | Automated tests. |
