@@ -68,6 +68,48 @@ Direct installation from the GitHub repository is also supported:
 python -m pip install git+https://github.com/UCB-stat159-f26/hw03-3-dhcollin.git
 ```
 
+## Plot age differences
+
+```python
+import matplotlib.pyplot as plt
+from tennisage import get_career_data, plot_age_difference
+
+serena = get_career_data("serena williams")
+ax = plot_age_difference(serena)
+ax.figure.savefig("serena_age_difference.png", dpi=300, bbox_inches="tight")
+plt.show()
+
+rafa = get_career_data("Rafael Nadal")
+plot_age_difference(rafa)
+plt.show()
+```
+
+`plot_age_difference(matches, *, ax=None)` returns a Matplotlib `Axes`.
+It plots only rows marked `included_in_plot=True`, with player age on the
+horizontal axis and player age minus opponent age on the vertical axis.
+Positive differences mean the player was older; negative differences mean
+the opponent was older. Wins are cyan and losses are purple. The gray line
+marks equal ages. Axis limits adapt to the eligible matches, and individual
+matches are not annotated.
+
+The function works offline with an already retrieved data frame. It does not
+change that frame or automatically display or save a figure. Pass an existing
+ordinary Matplotlib axes through `ax` to use a subplot; the function adds
+points, sets labels and limits, and returns that same axes:
+
+```python
+fig, ax = plt.subplots(figsize=(11, 7), layout="constrained")
+plot_age_difference(serena, ax=ax)
+```
+
+The required columns are `player_name`, `player_age`, `age_difference`,
+`result`, and `included_in_plot`. Inclusion flags must be boolean and complete.
+Eligible rows must describe one named player, have a `W` or `L` result, and
+contain finite real numeric coordinates with nonnegative player ages.
+Missing ages on excluded rows are allowed. An empty selection or invalid data
+raises `ValueError`; a non-data-frame input or an invalid axes type raises
+`TypeError`. Polar and three-dimensional axes are not supported.
+
 ## Tests
 
 Run the tests from the repository's top-level directory:
@@ -88,6 +130,9 @@ inclusion rules, and compatibility with the women's output columns and types.
 Retrieval tests replace HTTP responses with local payloads. They exercise
 name lookup, both profile layouts, archive overlap, metadata validation,
 request failures, and current men's records containing opponent birth dates.
+Plotting tests use a noninteractive backend and local data to check coordinates,
+win/loss colors, inclusion flags, adaptive limits, axes reuse, input validation,
+unchanged input data, and PNG/PDF output.
 
 ## Raw match data
 
@@ -130,6 +175,7 @@ describes all columns, validation rules, and inclusion rules.
 | `pyproject.toml` | Package metadata, dependencies, build configuration, and pytest settings. |
 | `src/tennisage/` | Importable Python package. |
 | `src/tennisage/data.py` | Public career-data retrieval and current/archive assembly. |
+| `src/tennisage/plotting.py` | Public age-difference scatter plot and input validation. |
 | `src/tennisage/_download.py` | HTTP requests, timeouts, and text decoding. |
 | `src/tennisage/_players.py` | Player-name lookup, profile URLs, and metadata validation. |
 | `src/tennisage/_parsing.py` | Private match-array parser and structural validation. |
