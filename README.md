@@ -110,6 +110,40 @@ Missing ages on excluded rows are allowed. An empty selection or invalid data
 raises `ValueError`; a non-data-frame input or an invalid axes type raises
 `TypeError`. Polar and three-dimensional axes are not supported.
 
+## Example notebook
+
+[Career examples](examples/career_examples.ipynb) demonstrates retrieval and
+plotting for Serena Williams and Rafael Nadal, summarizes retained and excluded
+matches, and displays the error for an unknown player. The notebook includes
+executed outputs and records the retrieval time and package versions.
+
+To open it locally, run these commands from the repository's top-level directory
+with the virtual environment activated:
+
+```bash
+python -m pip install -e ".[dev,notebook]"
+python -m jupyter lab examples/career_examples.ipynb
+```
+
+Select the Python kernel from this environment, then restart the kernel and
+run all cells. The notebook may run with its working directory set to either
+the repository root or `examples/`. It imports the installed package without
+changing Python's module search path.
+
+Running the notebook downloads current records from Tennis Abstract and
+overwrites these figures:
+
+- [Serena Williams age differences](examples/figures/serena_age_difference.png).
+- [Rafael Nadal age differences](examples/figures/rafael_age_difference.png).
+
+Viewing the saved outputs requires no download. Rerunning the retrieval cells
+requires internet access, and upstream changes may alter the match counts and
+figures. To refresh the notebook from the terminal:
+
+```bash
+python -m jupyter nbconvert --to notebook --execute --inplace examples/career_examples.ipynb --ExecutePreprocessor.timeout=180
+```
+
 ## Tests
 
 Run the tests from the repository's top-level directory:
@@ -133,6 +167,10 @@ request failures, and current men's records containing opponent birth dates.
 Plotting tests use a noninteractive backend and local data to check coordinates,
 win/loss colors, inclusion flags, adaptive limits, axes reuse, input validation,
 unchanged input data, and PNG/PDF output.
+Public-workflow tests pass retrieved data directly to the plotting function
+for both tours, including excluded rows and successive calls for different
+players. These tests use local HTTP responses. The notebook is a live-data
+example and is not executed by pytest.
 
 ## Raw match data
 
@@ -182,8 +220,10 @@ describes all columns, validation rules, and inclusion rules.
 | `src/tennisage/_cleaning.py` | Women's and men's career cleaning, age calculations, and inclusion flags. |
 | `tests/` | Automated tests. |
 | `tests/fixtures/` | Local career samples and their field documentation. |
+| `examples/career_examples.ipynb` | Executed examples of both public functions and the invalid-name error. |
+| `examples/figures/` | PNG plots saved by the example notebook. |
 | `docs/data_dictionary.md` | Cleaned columns, age definitions, and validation rules. |
-| `MANIFEST.in` | Include tests, local fixtures, and documentation in the source distribution. |
+| `MANIFEST.in` | Include tests, fixtures, documentation, and examples in the source distribution. |
 | `README.md` | Installation, testing, and project documentation. |
 | `instructions.md` | Assignment instructions supplied with the repository. |
 | `.gitignore` | Exclusions for local environments, caches, and build outputs. |
