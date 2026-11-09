@@ -7,6 +7,13 @@ The analysis compares a player's age with the difference between that player's
 age and their opponent's age, using match records from
 [Tennis Abstract](https://www.tennisabstract.com/).
 
+The package exposes two public functions:
+
+| Function | Input | Output |
+| --- | --- | --- |
+| `get_career_data(player_name, *, timeout=20.0)` | A player name and an optional request timeout. | A cleaned pandas data frame containing the available career records. |
+| `plot_age_difference(matches, *, ax=None)` | The cleaned data frame and an optional Matplotlib axes. | A Matplotlib axes containing the age-difference scatter plot. |
+
 ## Installation
 
 Use Python 3.10 or newer. From the repository's top-level directory:
@@ -172,6 +179,20 @@ for both tours, including excluded rows and successive calls for different
 players. These tests use local HTTP responses. The notebook is a live-data
 example and is not executed by pytest.
 
+## Build the package
+
+With the `dev` dependencies installed, create a source distribution and wheel:
+
+```bash
+python -m build
+```
+
+The files are written to `dist/`. The wheel contains the importable package;
+the source distribution also includes the tests, local fixtures, data dictionary,
+example notebook, and saved figures. These build outputs are excluded from Git.
+The package uses the `src/` layout so that tests and examples exercise an
+installed package instead of depending on imports from the current directory.
+
 ## Raw match data
 
 The private parser in `src/tennisage/_parsing.py` reads the JSON-compatible
@@ -206,6 +227,31 @@ Retirements are retained when ages are available. The data are not restricted
 to an article publication date. The [data dictionary](docs/data_dictionary.md)
 describes all columns, validation rules, and inclusion rules.
 
+## Scope and limitations
+
+- Career coverage depends on the records available from Tennis Abstract.
+  The package combines the required current and archive tables, but cannot
+  establish whether the upstream database contains every historical match.
+- Retrieval depends on Tennis Abstract's player index, profile metadata, and
+  JavaScript table structure. A website redesign, unavailable file, or malformed
+  required record can prevent retrieval. Local tests check the supported formats;
+  they do not establish the current availability of the website.
+- Ages calculated from birth dates use the source tournament date, which may
+  differ from the date of an individual round. Dividing elapsed days by 365.25
+  gives an approximate age in years. Legacy reported opponent ages retain the
+  source's precision and may use a different dating convention.
+- Exclusion rules recognize the documented stand-alone walkover and default
+  markers. Other score text is not a complete classification of match status.
+  Missing opponent ages remain visible in the returned data through explicit
+  flags and reasons.
+- Repeating a download can produce different records after an upstream update.
+  The notebook preserves example outputs and retrieval metadata, but the package
+  does not save a permanent raw-data snapshot. To reproduce a particular analysis
+  exactly, retain its raw inputs and record the dependency versions as well.
+- The figure describes age differences and observed match outcomes. It does
+  not estimate a causal effect of age or adjust for opponent strength, tournament
+  selection, or other differences across a player's career.
+
 ## Repository organization
 
 | Path | Purpose |
@@ -227,6 +273,65 @@ describes all columns, validation rules, and inclusion rules.
 | `README.md` | Installation, testing, and project documentation. |
 | `instructions.md` | Assignment instructions supplied with the repository. |
 | `.gitignore` | Exclusions for local environments, caches, and build outputs. |
+
+## Personal reflection
+
+Turning the HW2 analysis into `tennisage` helped me understand the difference
+between completing one analysis and designing code that someone else can reuse.
+For a plot centered on Serena Williams, the player's identity and the structure
+of her data could remain implicit. A package has to make those assumptions
+explicit. It needs to accept different spellings of a name, retrieve the correct
+career, return a consistent data frame, and explain why a request fails. Keeping
+retrieval and plotting as separate public functions also makes the cleaned data
+available for inspection before any points appear on a figure.
+
+The most instructive data issue was the difference between the women's and
+men's records. The same field position can contain an opponent's birth date or
+a reported age. Treating both as ordinary numbers would produce incorrect
+comparisons even if the program ran without an exception. The cleaning logic
+therefore has to interpret the field before calculating an age difference.
+Handling birth dates in current men's records also showed me why examples are
+useful starting points but should not be mistaken for a complete description
+of a changing data source. The shared output columns let the plotting function
+work without needing to know which representation appeared upstream.
+
+This assignment also made data inclusion a more deliberate part of my workflow.
+Walkovers, defaults, and missing opponent ages require decisions about what a
+point represents. Retaining those records with an inclusion flag and an
+explanation makes the decisions inspectable. I can compare the number of
+retrieved records with the number plotted instead of assuming that every
+downloaded row should appear. Documenting the tournament-date convention and
+the sign of the age difference serves a similar purpose: it makes the meaning
+of the coordinates explicit, rather than leaving a reader to infer it from
+the picture.
+
+Offline testing changed how I thought about evidence that the package works.
+A successful download shows that a request worked at that moment, but it does
+not isolate whether the cleaning rules are correct. Small local examples make
+it possible to check known ages, missing values, duplicate matches, and invalid
+inputs against specific expectations. Mocked responses extend those checks to
+name lookup and career assembly while keeping network availability out of the
+test results. Passing the retrieved frames directly into the plotting function
+then checks that the pieces agree on their shared data format. The live notebook
+and the automated suite serve different purposes, and both are useful.
+
+Keeping functions short encouraged me to separate parsing, validation, cleaning,
+retrieval, and plotting into named operations. That separation makes failures
+easier to locate, although too many small helpers can make the overall flow
+harder to follow. Clear names and a small public interface help balance those
+concerns. The sequence of contributions also reinforced the value of finishing
+one coherent change at a time, with tests and documentation tied to the behavior
+being added. This gives each step a purpose that is easier to review and explain.
+
+Finally, I learned to distinguish repeatable processing from a frozen data
+source. The package can apply the same rules again, but a later download may
+contain different records. Recording versions and retrieval times helps explain
+the saved examples; preserving the raw inputs would be the next improvement
+for reproducing an exact historical result. I would also expand the fixtures
+when new source formats appear and check installation across the supported
+Python and dependency versions. Overall, the assignment connected reproducibility
+to practical design decisions: a documented interface, explicit data conventions,
+meaningful errors, and tests that check more than whether a plot is produced.
 
 ## References
 
